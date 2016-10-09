@@ -1,4 +1,3 @@
 # Trident
 
-**TODO: Add description**
-
+A simple Single Sign On application
