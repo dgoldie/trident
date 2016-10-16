@@ -1,0 +1,16 @@
+{
+  "request": {
+    "path_pattern": "\A/request.*neko\z",
+    "port": 8080,
+    "method": "GET"
+  },
+  "response": {
+    "body_file": "test/data/__files/example.json",
+    "cookies": {},
+    "headers": {
+      "Content-Type": "text/html; charset=UTF-8",
+      "Server": "GFE/2.0"
+    },
+    "status_code": 200
+  }
+}

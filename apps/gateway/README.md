@@ -1,24 +1,40 @@
 # Gateway
 
-**TODO: Add description**
+**Multiport forward proxy by policies.**
 
-## Installation
+**Heavily inspired by KazuCocoa's [http_proxy](https://github.com/KazuCocoa/http_proxy).**
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
+##Configuration
 
-  1. Add `gateway` to your list of dependencies in `mix.exs`:
+GATEWAY host = xyz
 
-    ```elixir
-    def deps do
-      [{:gateway, "~> 0.1.0"}]
-    end
-    ```
+```
+admin : localhost:4000
+```
 
-  2. Ensure `gateway` is started before your application:
+```
+#map hosts/port
 
-    ```elixir
-    def application do
-      [applications: [:gateway]]
-    end
-    ```
+%{ railsapp: %{
+     in: "localhost:8088",
+     location: "localhost:3000",
+     routes: %{
+       "/bar/*": :pass_through,
+       "/foo/*": :protected
+     },
+   },
+   nodeapp: %{
+     in: "localhost:8078",
+     location: "localhost:5000",
+     routes: %{
+       "/abc/*": :pass_through,
+       "/xyz/*": :protected
+     }
+   }
+}
+```
+
+
+
+
 
