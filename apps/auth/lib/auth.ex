@@ -1,2 +1,0 @@
-defmodule Auth do
-end

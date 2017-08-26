@@ -1,2 +1,0 @@
-defmodule Directory do
-end

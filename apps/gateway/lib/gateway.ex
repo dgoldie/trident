@@ -1,2 +1,0 @@
-defmodule Gateway do
-end
