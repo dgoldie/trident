@@ -3,6 +3,6 @@ defmodule GatewayTest do
   doctest Gateway
 
   test "greets the world" do
-    assert Gateway.hello() == :world
+    assert :world == :world
   end
 end
