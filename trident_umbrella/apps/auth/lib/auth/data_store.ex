@@ -1,6 +1,6 @@
-defmodule Directory.DataStore do
+defmodule Auth.DataStore do
   @moduledoc """
-  Documentation for Directory Data Store.
+  Documentation for Auth Data Store.
   """
   use Agent
   require Logger
@@ -9,7 +9,7 @@ defmodule Directory.DataStore do
   Starts a single new bucket.
   """
   def start_link(_opts) do
-    Logger.debug fn -> "DataStore starting...Directory" end
+    Logger.debug fn -> "DataStore starting...Auth" end
     Agent.start_link(fn -> %{} end, name: __MODULE__)
   end
 

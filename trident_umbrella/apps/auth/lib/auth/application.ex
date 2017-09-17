@@ -13,6 +13,7 @@ defmodule Auth.Application do
     children = [
       # Starts a worker by calling: Auth.Worker.start_link(arg)
       # {Auth.Worker, arg},
+      {Auth.DataStore, %{}}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

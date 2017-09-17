@@ -15,9 +15,9 @@ defmodule Directory do
   #   Agent.start_link(fn -> %{} end, name: __MODULE__)
   # end
 
-  # @doc """
-  # Adds user to Data Store.
-  # """
+  @doc """
+  Adds user to Data Store.
+  """
   def add_user(user = %User{}) do
     DataStore.put(user.email, user)
   end

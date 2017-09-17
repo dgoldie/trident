@@ -1,18 +1,20 @@
 defmodule Auth do
   @moduledoc """
-  Documentation for Auth.
+  Documentation for Auth context.
   """
+
+  alias Auth.Session
+  alias Auth.DataStore
 
   @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Auth.hello
-      :world
-
+  Adds user to Data Store.
   """
-  def hello do
-    :world
+  def add_session(email) do
+    DataStore.put(email, uuid(email))
   end
+
+  defp uuid(email) do
+    UUID.uuid5(:url, email)
+  end
+
 end
