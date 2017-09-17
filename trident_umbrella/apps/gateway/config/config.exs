@@ -33,9 +33,10 @@ use Mix.Config
 config :gateway,
 proxies: [
            %{port: 8085,
-             to:   "http://localhost:3000"},
-           %{port: 4000,
-             to:   "http://google.com"},
-           %{port: 4001,
-             to:   "http://yahoo.com"}
+             to:   "http://localhost:3000",
+             auth: ["/visitors"]},
+           %{port: 8086,
+             to:   "http://localhost:3010",
+             auth: ["/about", "/visitors/**"]}
+
          ]

@@ -12,6 +12,7 @@ defmodule Gateway.Proxy.Handler do
 
   alias Plug.Conn
   alias Plug.Adapters.Cowboy, as: PlugCowboy
+  alias Gateway.Policy
 
   if Mix.env == :dev do
     use Plug.Debugger, otp_app: :gateway
@@ -55,6 +56,12 @@ defmodule Gateway.Proxy.Handler do
   @spec dispatch(Plug.Conn.t, param) :: Plug.Conn.t
   def dispatch(conn, _opts) do
     IO.puts "dispatch"
+    IO.puts "conn port = #{inspect conn.port}"
+    IO.puts "conn request path = #{inspect conn.request_path}"
+    conn
+    |> target_proxy
+    |> Policy.authenticate?(conn.request_path)
+    |> IO.inspect
 
     {:ok, client} =
       conn.method
@@ -62,6 +69,7 @@ defmodule Gateway.Proxy.Handler do
       |> String.to_atom
       |> HTTPoison.request(uri(conn), "", conn.req_headers,  options())
 
+    # IO.puts "client = #{inspect client}"
     {conn, ""}
     |> call_proxy(client)
   end
@@ -81,9 +89,9 @@ defmodule Gateway.Proxy.Handler do
 
   @spec uri(Plug.Conn.t) :: String.t
   def uri(conn) do
-    IO.puts "uri"
+    # IO.puts "uri"
     base = gen_path conn, target_proxy(conn)
-    IO.puts "base = #{inspect base}"
+    # IO.puts "base = #{inspect base}"
     case conn.query_string do
       "" ->
         base
@@ -118,12 +126,12 @@ defmodule Gateway.Proxy.Handler do
 
 
   defp call_proxy({conn, _req_body}, client) do
-    IO.puts "call_proxy"
-    IO.puts "conn = #{inspect conn}"
-    IO.puts "client = #{inspect client}"
-    Logger.debug fn -> "request path: #{gen_path(conn, target_proxy(conn))}" end
+    # IO.puts "call_proxy"
+    # IO.puts "conn = #{inspect conn}"
+    # IO.puts "client = #{inspect client}"
+    # Logger.debug fn -> "request path: #{gen_path(conn, target_proxy(conn))}" end
     headers = conn.req_headers |> Enum.into(%{})
-    Logger.debug fn -> "#{__MODULE__}.call_proxy, :ok, headers: #{headers |> Poison.encode!}, body: #{client.body}, status: #{client.status_code}" end
+    # Logger.debug fn -> "#{__MODULE__}.call_proxy, :ok, headers: #{headers |> Poison.encode!}, body: #{client.body}, status: #{client.status_code}" end
 
     conn
     |> send_resp(client.status_code, client.body)
