@@ -27,4 +27,11 @@ defmodule Auth.DataStore do
     Agent.update(__MODULE__, &Map.put(&1, key, value))
   end
 
+  @doc """
+  Deletes the `key` `value` pair in the `bucket`.
+  """
+  def delete(key) do
+    Agent.update(__MODULE__, &Map.delete(&1, key))
+  end
+
 end

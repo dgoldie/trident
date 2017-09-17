@@ -7,14 +7,32 @@ defmodule Auth do
   alias Auth.DataStore
 
   @doc """
-  Adds user to Data Store.
+  Gets session from Data Store.
+  """
+  def get_session(uuid) do
+    DataStore.get(uuid)
+  end
+
+  @doc """
+  Adds session to Data Store.
   """
   def add_session(email) do
-    DataStore.put(email, uuid(email))
+    email
+    |> uuid
+    |> DataStore.put(email)
   end
 
   defp uuid(email) do
     UUID.uuid5(:url, email)
   end
+
+  @doc """
+  Delete session from Data Store.
+  """
+  def delete_session(uuid) do
+    DataStore.delete(uuid)
+  end
+
+
 
 end
