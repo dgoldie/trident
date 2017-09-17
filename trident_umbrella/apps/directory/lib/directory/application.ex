@@ -8,6 +8,7 @@ defmodule Directory.Application do
   def start(_type, _args) do
     # List all child processes to be supervised
     children = [
+      {Directory, %{}}
       # Starts a worker by calling: Directory.Worker.start_link(arg)
       # {Directory.Worker, arg},
     ]

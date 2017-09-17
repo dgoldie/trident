@@ -38,5 +38,4 @@ proxies: [
            %{port: 8086,
              to:   "http://localhost:3010",
              auth: ["/about", "/visitors/**"]}
-
          ]
