@@ -3,10 +3,10 @@ defmodule Gateway.Policy do
 
   def authenticate?(proxy, route) do
     IO.puts "get -- policy"
-    IO.inspect proxy[:auth]
+    IO.inspect proxy[:protected_routes]
     IO.puts "route = #{inspect route}"
 
-    proxy[:auth]
+    proxy[:protected_routes]
     |> Enum.filter( fn(path) ->
       m2 = Fuzzyurl.mask(path: path)
       Fuzzyurl.matches?(m2, route)

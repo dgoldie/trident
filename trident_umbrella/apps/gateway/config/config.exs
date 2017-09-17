@@ -34,8 +34,8 @@ config :gateway,
 proxies: [
            %{port: 8085,
              to:   "http://localhost:3000",
-             auth: ["/visitors"]},
+             protected_routes: ["/visitors"]},
            %{port: 8086,
              to:   "http://localhost:3010",
-             auth: ["/about", "/visitors/**"]}
+             protected_routes: ["/about", "/visitors/**"]}
          ]
