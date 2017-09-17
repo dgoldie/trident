@@ -4,9 +4,10 @@ defmodule Gateway.Application do
   @moduledoc false
 
   use Application
+  require Logger
 
   def start(_type, _args) do
-    IO.puts "start application"
+    Logger.debug fn -> "Application starting...Gateway" end
     # List all child processes to be supervised
     children = [
       # Starts a worker by calling: Gateway.Worker.start_link(arg)

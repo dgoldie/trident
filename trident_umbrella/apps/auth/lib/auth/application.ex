@@ -4,8 +4,11 @@ defmodule Auth.Application do
   @moduledoc false
 
   use Application
+  require Logger
 
   def start(_type, _args) do
+    Logger.debug fn -> "Application starting...Auth" end
+
     # List all child processes to be supervised
     children = [
       # Starts a worker by calling: Auth.Worker.start_link(arg)
