@@ -17,9 +17,10 @@ defmodule Auth do
   Adds session to Data Store.
   """
   def add_session(email) do
-    email
-    |> uuid
-    |> DataStore.put(email)
+    token = uuid(email)
+    DataStore.put(token, email)
+
+    token
   end
 
   defp uuid(email) do
@@ -32,7 +33,5 @@ defmodule Auth do
   def delete_session(uuid) do
     DataStore.delete(uuid)
   end
-
-
 
 end

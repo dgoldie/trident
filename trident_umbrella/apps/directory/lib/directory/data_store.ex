@@ -10,7 +10,8 @@ defmodule Directory.DataStore do
   """
   def start_link(_opts) do
     Logger.debug fn -> "DataStore starting...Directory" end
-    Agent.start_link(fn -> %{} end, name: __MODULE__)
+    users = Directory.seed_users
+    Agent.start_link(fn -> users end, name: __MODULE__)
   end
 
   @doc """

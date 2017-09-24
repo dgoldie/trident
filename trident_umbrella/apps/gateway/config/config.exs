@@ -34,8 +34,15 @@ config :gateway,
 proxies: [
            %{port: 8085,
              to:   "http://localhost:3000",
-             protected_routes: ["/visitors"]},
+             protected_routes: ["/visitors/*"]},
            %{port: 8086,
              to:   "http://localhost:3010",
-             protected_routes: ["/about", "/visitors/**"]}
+             protected_routes: ["/about", "/visitors/**"]},
+           %{port: 8090,
+             to:   "http://localhost:4000",
+             protected_routes: ["/documents", "/stylesheets", "/flyers"]},
+           %{port: 8091,
+             to:   "https://lit-island-51614.herokuapp.com/",
+             protected_routes: ["/documents", "/stylesheets", "/flyers"]}
+
          ]

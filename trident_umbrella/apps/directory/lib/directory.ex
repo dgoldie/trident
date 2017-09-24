@@ -8,6 +8,13 @@ defmodule Directory do
   alias Directory.DataStore
 
 
+  # def find(email, password) do
+  #   IO.puts "Directory find user"
+  #   IO.puts "email = #{email}, #{password}"
+
+  # end
+
+
   # @doc """
   # Starts a new bucket.
   # """
@@ -22,12 +29,13 @@ defmodule Directory do
     DataStore.put(user.email, user)
   end
 
-  # @doc """
-  # Gets a value from the `bucket` by `key`.
-  # """
-  # def get(key) do
-  #   Agent.get(__MODULE__, &Map.get(&1, key))
-  # end
+  @doc """
+  Gets a value from the `bucket` by `key`.
+  """
+  def find(email) do
+    IO.puts('directory find')
+    DataStore.get(email)
+  end
 
   # @doc """
   # Puts the `value` for the given `key` in the `bucket`.
@@ -35,6 +43,25 @@ defmodule Directory do
   # defp put(key, value) do
   #   Agent.update(__MODULE__, &Map.put(&1, key, value))
   # end
+  #
+  def seed_users do
+    IO.puts "seed_users"
+
+    seed_data = Application.get_env :directory, :users, nil
+    users = Enum.map(seed_data, fn(user) ->
+      user
+      |> IO.inspect
+      |> Map.merge(%{password: "demo"})
+      |> User.create
+    end)
+
+    map = users
+    |> Enum.into(%{}, fn(x) -> {x.email, x} end)
+
+    IO.puts "initial users map = #{inspect map}"
+    map
+
+  end
 
 end
 

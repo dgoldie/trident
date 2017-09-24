@@ -20,4 +20,9 @@ defmodule Directory.Application do
     opts = [strategy: :one_for_one, name: Directory.Supervisor]
     Supervisor.start_link(children, opts)
   end
+
+  # def start do
+  #   Logger.debug fn -> "Directory other start" end
+  #   Directory.seed_users
+  # end
 end

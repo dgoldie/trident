@@ -10,7 +10,6 @@ defmodule Directory.User do
            last_name:          Map.fetch!(attrs, :last_name),
            encrypted_password: hashed_password(attrs[:password])
           }
-    |> Directory.add_user
   end
 
   def hashed_password(password) do
@@ -19,6 +18,5 @@ defmodule Directory.User do
 
   def authenticate(user = %User{}, password) do
     Comeonin.Bcrypt.checkpw(password, user.encrypted_password)
-
   end
 end

@@ -28,3 +28,19 @@ use Mix.Config
 # here (which is why it is important to import them last).
 #
 #     import_config "#{Mix.env}.exs"
+#
+
+config :directory,
+users:
+  [
+    %{email:      "doug@trident.com",
+      first_name: "Doug",
+      last_name:  "Goldie"},
+    %{email:      "andy@trident.com",
+      first_name: "Andy",
+      last_name:  "Leak"},
+    %{email:      "kat@trident.com",
+      first_name: "Katharina",
+      last_name:  "Peter"}
+  ]
+

@@ -13,6 +13,8 @@ defmodule Gateway.Proxy.Handler do
   alias Plug.Conn
   alias Plug.Adapters.Cowboy, as: PlugCowboy
   alias Gateway.Policy
+  alias Gateway.Web
+  alias Directory.User
 
   if Mix.env == :dev do
     use Plug.Debugger, otp_app: :gateway
@@ -24,6 +26,27 @@ defmodule Gateway.Proxy.Handler do
 
   plug Plug.Logger
   plug :dispatch
+  plug Plug.Parsers, parsers: [:urlencoded]
+
+  @valid_secret String.duplicate("abcdef0123456789", 8)
+  @secret_key_base "9TeyHMxOPQw6ChuTUDVyI399hEV0QMWNIvzw95z5olLrS3fLIE3OwhLqHdSEZ9eU"
+
+  # Use the session plug with the table name
+  plug Plug.Session, store: :cookie,
+                     key: "_trident_session",
+                     secret: @valid_secret,
+                     encryption_salt: "-- LONG STRING WITH AT LEAST 64 BYTES --",
+                     signing_salt: "-- LONG STRING WITH AT LEAST 64 BYTES --",
+                     key_length: 64,
+                     log: :debug
+
+  plug :put_secret_key_base
+  def put_secret_key_base(conn, _) do
+    put_in conn.secret_key_base, @secret_key_base
+  end
+
+
+
 
   # Same as Plug.Conn
   # https://github.com/elixir-lang/plug/blob/576c04c2cba778f1ac9ca28aa71c50efa1046b50/lib/plug/conn.ex#L125
@@ -57,19 +80,79 @@ defmodule Gateway.Proxy.Handler do
   def dispatch(conn, _opts) do
     IO.puts "dispatch"
     IO.puts "conn port = #{inspect conn.port}"
+    IO.puts "conn method = #{inspect conn.method}"
     IO.puts "conn request path = #{inspect conn.request_path}"
-    conn
-    |> target_proxy
-    |> Policy.authenticate?(conn.request_path)
-    |> IO.inspect
+    conn = put_secret_key_base(conn, "")
 
+    cond do
+      request_login?(conn) ->
+        Logger.debug "request is login !!!"
+        Web.Login.create_session(conn, target_proxy(conn)[:to])
+
+      Policy.protected_route?(conn) ->
+        Logger.debug "request is protected_route !!!"
+
+        case authenticate(conn) do
+          nil  ->
+            Web.Login.new_login(conn)
+
+          email ->
+            Logger.info fn -> "authenticated #{email}, need to pass" end
+            finish_dispatch(conn)
+        end
+
+      true ->
+        Logger.debug "request is NOT a protected_route !!!"
+
+        finish_dispatch(conn)
+    end
+
+    # if request_login?(conn) do
+    #   Web.Login.create_session(conn, target_proxy(conn)[:to])
+    # else
+
+    #   case authenticate(conn) do
+    #     nil  ->
+    #       Web.Login.new_login(conn)
+
+    #     email ->
+    #       Logger.info fn -> "authenticated #{email}, need to pass" end
+    #       finish_dispatch(conn)
+    #   end
+    # end
+
+  end
+
+  def request_login?(conn) do
+    conn.request_path == "/login"
+  end
+
+  # def dispatch_root(conn, user, headers) do
+  #   {:ok, client} =
+  #     HTTPoison.request(:get, root_uri(conn), "", headers,  options())
+
+  #   {conn, ""}
+  #   |> call_proxy(client)
+  # end
+
+  def root_uri(conn) do
+    IO.puts "root uri"
+    base = target_proxy(conn)[:to]
+    IO.puts "base is #{inspect base}"
+    base
+  end
+
+
+  @doc """
+  Finish dispatching connection for authenticated or route not protected.
+  """
+  def finish_dispatch(conn) do
     {:ok, client} =
       conn.method
       |> String.downcase
       |> String.to_atom
       |> HTTPoison.request(uri(conn), "", conn.req_headers,  options())
 
-    # IO.puts "client = #{inspect client}"
     {conn, ""}
     |> call_proxy(client)
   end
@@ -201,5 +284,78 @@ defmodule Gateway.Proxy.Handler do
   end
 
 
+  defp authenticate(conn) do
+    IO.puts "authenticate"
+
+    opts = Plug.Session.init(store: :cookie, key: "_trident_session", secret: @valid_secret, signing_salt: "cookie store signing salt")
+    conn
+    |> Plug.Session.call(opts)
+    |> fetch_session
+    |> get_session(:trident_key)
+    |> IO.inspect
+    |> Auth.get_session
+
+    # IO.puts "token = #{inspect token}"
+    # case Auth.get_session(token) do
+    #   email -> email
+    #   nil ->
+    #     IO.puts "token = #{inspect other}"
+    #     false
+    # end
+  end
+
+  def valid_secret do
+    @valid_secret
+  end
+
+  def secret_key_base do
+    @secret_key_base
+  end
+
+  # def add_session_token(token, email, conn) do
+
+  # end
+
+  # def handle_login_request(conn) do
+  #   IO.puts "handle_login_request"
+
+  #   cond do
+  #     conn.request_path != "/login" -> conn
+  #     true ->
+  #       conn
+  #       |> parse
+  #       |> validate_login
+  #   end
+
+  # end
+
+  # def parse(conn, opts \\ []) do
+  #   opts = Keyword.put_new(opts, :parsers, [Plug.Parsers.URLENCODED, Plug.Parsers.MULTIPART])
+  #   Plug.Parsers.call(conn, Plug.Parsers.init(opts))
+  # end
+
+  # def validate_login(conn) do
+  #   IO.puts "validate login"
+  #   IO.inspect conn.params
+  #   login = conn.params["login"]
+  #   email = login["name"]
+  #   password = login["password"]
+  #   redirect_back = login["redirect_back"]
+
+  #   case Directory.find(email) do
+  #     user = %User{} ->
+  #       case User.authenticate(user, password) do
+  #         true -> user
+  #         false -> Directory.new_login(conn, :no_user)
+  #       end
+
+  #     nil ->
+  #       Directory.new_login(conn, :no_user)
+  #   end
+  # end
+
+  # def authenticate_user(user, password) do
+
+  # end
 
 end

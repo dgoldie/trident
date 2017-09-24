@@ -1,9 +1,15 @@
 defmodule Gateway.Policy do
+  alias Plug.Conn
 
 
-  def authenticate?(proxy, route) do
-    IO.puts "get -- policy"
+  def protected_route?(conn) do
+    IO.puts "protected_route?"
+    # proxy = find_proxy(conn)
+    proxy = target_proxy(conn)
+    IO.puts "proxy - #{inspect proxy}"
     IO.inspect proxy[:protected_routes]
+
+    route = conn.request_path
     IO.puts "route = #{inspect route}"
 
     proxy[:protected_routes]
@@ -12,6 +18,28 @@ defmodule Gateway.Policy do
       Fuzzyurl.matches?(m2, route)
     end)
     |> Enum.any?
+  end
+
+
+  @spec proxies() :: []
+  defp proxies,
+    do: Application.get_env :gateway, :proxies, nil
+
+  defp find_proxy(conn) do
+    IO.puts "find proxy"
+    port = conn.port
+    IO.puts "port = #{port}"
+    Enum.find(proxies(), fn(x) -> match?(%{port: port}, x) end)
+  end
+
+  # different implementation of find_proxy
+  #
+  defp target_proxy(conn) do
+    proxies()
+    |> Enum.reduce([], fn proxy, acc ->
+      if proxy.port == conn.port, do: [proxy | acc], else: acc
+    end)
+    |> Enum.at(0)
   end
 
 #   def get_policy(route, policy) do
