@@ -33,14 +33,14 @@ use Mix.Config
 config :directory,
 users:
   [
-    %{email:      "doug@trident.com",
-      first_name: "Doug",
-      last_name:  "Goldie"},
-    %{email:      "andy@trident.com",
-      first_name: "Andy",
-      last_name:  "Leak"},
-    %{email:      "kat@trident.com",
-      first_name: "Katharina",
-      last_name:  "Peter"}
+    %{email:      "moe@tri.com",
+      first_name: "Moe",
+      last_name:  "Howard"},
+    %{email:      "larry@tri.com",
+      first_name: "Larry",
+      last_name:  "Fine"},
+    %{email:      "curly@tri.com",
+      first_name: "Curly",
+      last_name:  "Howard"}
   ]
 
