@@ -5,6 +5,7 @@ defmodule Gateway.Web.Login do
   alias Gateway.Proxy.Handler
 
   def new_login(conn, error \\ []) do
+    IO.puts "new_login, error: #{error}"
     options = [redirect_back: conn.request_path]
 
     case error do
@@ -18,6 +19,7 @@ defmodule Gateway.Web.Login do
     IO.puts "current dir = #{File.cwd!}"
     IO.puts "new login, request_path = #{conn.request_path}"
     page_contents = EEx.eval_file("apps/gateway/lib/gateway/web/templates/new_login.eex", options)
+    # IEx.pry
 
     conn
     |> Plug.Conn.put_resp_content_type("text/html")
