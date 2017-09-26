@@ -1,3 +1,0 @@
-# Trident
-
-**TODO: Add description**
