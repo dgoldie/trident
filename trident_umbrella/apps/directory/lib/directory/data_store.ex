@@ -25,6 +25,7 @@ defmodule Directory.DataStore do
   Puts the `value` for the given `key` in the `bucket`.
   """
   def put(key, value) do
+    IO.puts "Directory DataStore: put #{key}, #{inspect value}"
     Agent.update(__MODULE__, &Map.put(&1, key, value))
   end
 

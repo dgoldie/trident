@@ -33,9 +33,19 @@
         font-family: 'Source Sans Pro', sans-serif;
         font-size:2em;
         font-weight:300;
+        margin-bottom:5px;
+        color:#7f8c8d;
+
+        /*text-shadow:1px 1px 0px white;*/
+      }
+
+      h6 {
+        font-family: 'Source Sans Pro', sans-serif;
+        font-size:1em;
+        font-weight:300;
         margin-bottom:25px;
         color:#7f8c8d;
-        text-shadow:1px 1px 0px white;
+        text-shadow:1px 1px 0px red;
       }
 
       input {
@@ -95,6 +105,8 @@
     <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro' rel='stylesheet' type='text/css'>
     <form accept-charset="UTF-8" action="/login" method="post">
       <h4> Login Information </h4>
+      <h6><%= error_msg %></h6>
+
       <input id="login_redirect_back" name="login[redirect_back]" value=<%= redirect_back %> type="hidden">
       <input class="name" id="login_name" name="login[name]" placeholder="Enter Username" type="text">
       <input class="pw" id="login_password" name="login[password]" placeholder="Enter Password" type="password">

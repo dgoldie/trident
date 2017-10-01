@@ -1,13 +1,17 @@
 defmodule Gateway.Policy do
   alias Plug.Conn
+  require IEx
+
+
+
 
   def protected_route?(conn) do
     IO.puts "protected_route?"
     proxy = target_proxy(conn)
     route = conn.request_path
     IO.puts "...route = #{inspect route}"
-
-    allow? = proxy[:allow]
+    # IO.puts "****** proxy allow = #{inspect proxy[:allow]}"
+    allow? = proxy[:allow] ++ asset_matchers()
     |> Enum.filter( fn(path) ->
       m2 = Fuzzyurl.mask(path: path)
       Fuzzyurl.matches?(m2, route)
@@ -38,6 +42,11 @@ defmodule Gateway.Policy do
       if proxy.port == conn.port, do: [proxy | acc], else: acc
     end)
     |> Enum.at(0)
+  end
+
+  defp asset_matchers do
+    ~w(.css .js .jpg .png .gif .bmp .ico)
+    |> Enum.map(fn (x) -> "**" <> x end)
   end
 
 #   def get_policy(route, policy) do

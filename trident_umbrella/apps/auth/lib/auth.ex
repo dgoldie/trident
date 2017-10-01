@@ -10,7 +10,9 @@ defmodule Auth do
   Gets session from Data Store.
   """
   def get_session(uuid) do
-    DataStore.get(uuid)
+    result = DataStore.get(uuid)
+    IO.puts "****** get_session: for #{uuid}, result = #{result}"
+    result
   end
 
   @doc """
@@ -18,6 +20,7 @@ defmodule Auth do
   """
   def add_session(email) do
     token = uuid(email)
+    IO.puts "add_session for email: #{email}, token = #{token}"
     DataStore.put(token, email)
 
     token

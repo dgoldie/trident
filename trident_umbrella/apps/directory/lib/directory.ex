@@ -33,7 +33,7 @@ defmodule Directory do
   Gets a value from the `bucket` by `key`.
   """
   def find(email) do
-    IO.puts('directory find')
+    IO.puts("**** directory find: #{email}")
     DataStore.get(email)
   end
 

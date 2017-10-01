@@ -15,6 +15,9 @@ defmodule Gateway.Proxy.Handler do
   alias Gateway.Policy
   alias Gateway.Web
   alias Directory.User
+  alias Gateway.Plug.HandleLogin
+  alias Gateway.Plug.CheckPolicies
+  alias Gateway.Plug.AuthenticateSession
 
   if Mix.env == :dev do
     use Plug.Debugger, otp_app: :gateway
@@ -24,9 +27,14 @@ defmodule Gateway.Proxy.Handler do
 
   @default_schemes [:http, :https]
 
+  # pipeline
+  #
   plug Plug.Logger
-  plug :dispatch
   plug Plug.Parsers, parsers: [:urlencoded]
+  plug :put_secret_key_base
+  plug HandleLogin, create_session_url: "/login"
+  plug CheckPolicies, paths: ["/upload"]
+  plug AuthenticateSession
 
   @valid_secret String.duplicate("abcdef0123456789", 8)
   @secret_key_base "9TeyHMxOPQw6ChuTUDVyI399hEV0QMWNIvzw95z5olLrS3fLIE3OwhLqHdSEZ9eU"
@@ -40,7 +48,12 @@ defmodule Gateway.Proxy.Handler do
                      key_length: 64,
                      log: :debug
 
-  plug :put_secret_key_base
+
+  plug :dispatch
+
+
+
+
   def put_secret_key_base(conn, _) do
     put_in conn.secret_key_base, @secret_key_base
   end
@@ -82,34 +95,34 @@ defmodule Gateway.Proxy.Handler do
     IO.puts "...conn request path = #{inspect conn.request_path}"
 
     conn = put_secret_key_base(conn, "")
+    finish_dispatch(conn)
+    # cond do
+    #   request_login?(conn) ->
+    #     Logger.debug fn -> "request is login !!!" end
+    #     Web.Login.create_session(conn, target_proxy(conn)[:to])
 
-    cond do
-      request_login?(conn) ->
-        Logger.debug fn -> "request is login !!!" end
-        Web.Login.create_session(conn, target_proxy(conn)[:to])
+    #   # allow_assets(conn) ->
+    #   #   Logger.debug fn -> "request assets !!!" end
+    #   #   finish_dispatch(conn)
 
-      allow_assets(conn) ->
-        Logger.debug fn -> "request assets !!!" end
-        finish_dispatch(conn)
+    #   # Policy.protected_route?(conn) ->
+    #   #   Logger.debug fn -> "request is protected_route !!!" end
 
-      Policy.protected_route?(conn) ->
-        Logger.debug fn -> "request is protected_route !!!" end
+    #   #   case authenticate(conn) do
+    #   #     nil  ->
+    #   #       Logger.debug fn -> "authenticate session failed !!!" end
+    #   #       Web.Login.new_login(conn)
 
-        case authenticate(conn) do
-          nil  ->
-            Logger.debug fn -> "authenticate session failed !!!" end
-            Web.Login.new_login(conn)
+    #   #     email ->
+    #   #       Logger.debug fn -> "authenticated #{email}, need to pass" end
+    #   #       finish_dispatch(conn)
+    #   #   end
 
-          email ->
-            Logger.debug fn -> "authenticated #{email}, need to pass" end
-            finish_dispatch(conn)
-        end
+    #   true ->
+    #     Logger.debug "request is NOT a protected_route !!!"
 
-      true ->
-        Logger.debug "request is NOT a protected_route !!!"
-
-        finish_dispatch(conn)
-    end
+    #     finish_dispatch(conn)
+    # end
 
   end
 
@@ -201,6 +214,14 @@ defmodule Gateway.Proxy.Handler do
     do: @default_schemes
 
 
+  def target_proxy(conn) do
+    proxies()
+    |> Enum.reduce([], fn proxy, acc ->
+      if proxy.port == conn.port, do: [proxy | acc], else: acc
+    end)
+    |> Enum.at(0)
+  end
+
   defp call_proxy({conn, _req_body}, client) do
     Logger.debug fn -> "call proxy: request path: #{gen_path(conn, target_proxy(conn))}" end
     headers = conn.req_headers |> Enum.into(%{})
@@ -266,25 +287,19 @@ defmodule Gateway.Proxy.Handler do
     |> URI.to_string
   end
 
-  defp target_proxy(conn) do
-    proxies()
-    |> Enum.reduce([], fn proxy, acc ->
-      if proxy.port == conn.port, do: [proxy | acc], else: acc
-    end)
-    |> Enum.at(0)
-  end
 
-  defp authenticate(conn) do
-    IO.puts "authenticate"
 
-    opts = Plug.Session.init(store: :cookie, key: "_trident_session", secret: @valid_secret, signing_salt: "cookie store signing salt")
-    conn
-    |> Plug.Session.call(opts)
-    |> fetch_session
-    |> get_session(:trident_key)
-    |> IO.inspect
-    |> Auth.get_session
-  end
+  # defp authenticate(conn) do
+  #   IO.puts "authenticate"
+
+  #   opts = Plug.Session.init(store: :cookie, key: "_trident_session", secret: @valid_secret, signing_salt: "cookie store signing salt")
+  #   conn
+  #   |> Plug.Session.call(opts)
+  #   |> fetch_session
+  #   |> get_session(:trident_key)
+  #   |> IO.inspect
+  #   |> Auth.get_session
+  # end
 
   def valid_secret do
     @valid_secret
