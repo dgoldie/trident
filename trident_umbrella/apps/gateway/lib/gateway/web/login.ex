@@ -53,11 +53,10 @@ defmodule Gateway.Web.Login do
         redirect_back = redirect_back || "/"
 
         conn
-        |> Plug.Conn.assign(:current_user, user)
         |> Plug.Conn.put_resp_content_type("text/html")
         |> fetch_my_session
         |> Plug.Conn.put_session(:trident_key, session_key)
-        |> put_resp_cookie("trident_user", "email=#{user.email}")
+        |> IO.inspect
         |> Plug.Conn.put_resp_header("location", redirect_back)
         |> Plug.Conn.send_resp(302, "")
         # |> Plug.Conn.halt
@@ -106,7 +105,8 @@ defmodule Gateway.Web.Login do
     IO.puts "handle_login_request"
 
     cond do
-      conn.request_path != "/login" -> conn
+      conn.request_path != "/login" ->
+        conn
       true ->
         conn
         |> parse
@@ -153,5 +153,14 @@ defmodule Gateway.Web.Login do
     |> fetch_session
   end
 
+  # convert user args to json
+  #
+  def user_info(user) do
+    args = %{"email" => user.email, "first_name" => user.first_name,"last_name" => user.last_name}
+    IO.puts "user_info = #{inspect args}"
+    result = Poison.encode!(args)
+    IO.puts "User info encoded ********* - #{inspect result}"
+    result
+  end
 
 end

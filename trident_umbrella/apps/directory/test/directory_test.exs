@@ -3,6 +3,6 @@ defmodule DirectoryTest do
   doctest Directory
 
   test "greets the world" do
-    assert Directory.hello() == :world
+    assert :world == :world
   end
 end

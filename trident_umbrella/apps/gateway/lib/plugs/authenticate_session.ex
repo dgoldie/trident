@@ -1,4 +1,7 @@
-defmodule Gateway.Plug.AuthenticateSession do
+defmodule Gateway.Plugs.AuthenticateSession do
+  @moduledoc """
+  Documentation for Directory Context.
+  """
 
   require Logger
   # alias Gateway.Policy
@@ -14,35 +17,46 @@ defmodule Gateway.Plug.AuthenticateSession do
     Logger.debug fn -> "-------Plug AuthenticateSession: ---------------" end
     Logger.debug fn -> ".......request path = #{path}" end
     IO.puts "opts = #{inspect opts}"
-
+    Handler.check_cookies(conn)
 
     # protected = Policy.protected_route?(conn)
     # IO.puts "protected? = #{inspect protected}"
 
-    if conn.assigns[:protected_route] do
-      Logger.debug fn -> "-------Plug AuthenticateSession: request is protected_route !!!" end
+    Logger.debug fn -> "-------Plug AuthenticateSession: request is protected_route !!!" end
 
-      case authenticate_session(conn, opts) do
-        nil  ->
-          Logger.debug fn -> "-------Plug AuthenticateSession: authenticate session failed. go to new login page!!!" end
-          # Web.Login.new_login(conn)
+    conn = case authenticate_session(conn, opts) do
+      nil  ->
+        Logger.debug fn -> "-------Plug AuthenticateSession: authenticate session failed." end
+        IO.puts "protected_route = #{inspect conn.assigns}"
+        if conn.assigns[:protected_route] do
+          Logger.debug fn -> "-------Plug AuthenticateSession: protected_route, go to login page." end
           new_login(conn)
+        end
+        conn
 
-        email ->
-          Logger.debug fn -> "-------Plug AuthenticateSession: authenticated #{email}, need to pass" end
-          conn |> assign(:user_email, email)
-      end
+      email ->
+        Logger.debug fn -> "-------Plug AuthenticateSession: authenticated #{email}, need to pass" end
+        IO.puts "email: user = #{inspect Directory.find(email)}"
+        conn
+        |> assign(:user_email, email)
+        |> assign(:current_user, Directory.find(email))
+
+
     end
 
+
+    IO.puts "end of AuthenticateSession call: "
+    IO.inspect conn
     conn
   end
 
 
   defp authenticate_session(conn, opts) do
+    IO.puts "authenticate_session"
     case trident_session(conn, opts) do
       nil -> nil
-      conn ->
-        Auth.get_session(conn)
+      key ->
+        Auth.get_session(key)
     end
   end
 
@@ -86,7 +100,7 @@ defmodule Gateway.Plug.AuthenticateSession do
     conn
     |> Plug.Conn.put_resp_content_type("text/html")
     |> Plug.Conn.send_resp(200, page_contents)
-    # |> Plug.Conn.halt
+    |> Plug.Conn.halt
   end
 
 end

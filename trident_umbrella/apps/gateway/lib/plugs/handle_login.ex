@@ -1,4 +1,13 @@
-defmodule Gateway.Plug.HandleLogin do
+defmodule Gateway.Plugs.HandleLogin do
+  @moduledoc """
+  HandleLogin processes login POST:
+    - validates user info in Directory
+    - creates token in Auth
+    - adds token in session.
+
+  NOTE: should it also add session?
+  """
+
   import Plug.Conn
 
   require Logger
@@ -15,6 +24,8 @@ defmodule Gateway.Plug.HandleLogin do
   def call(%Plug.Conn{request_path: path} = conn, opts) do
     IO.puts "call *******"
     Logger.debug fn -> "-------Plug HandleLogin: ---------------" end
+    Handler.check_cookies(conn)
+
     Logger.debug fn -> ".......request path = #{path}, method: #{conn.method}" end
     IO.puts "opts = #{inspect opts}"
     if path == opts[:create_session_url] do
@@ -24,6 +35,8 @@ defmodule Gateway.Plug.HandleLogin do
 
     end
 
+    IO.puts "after create session"
+    Handler.check_cookies(conn)
     conn
   end
 

@@ -15,9 +15,12 @@ defmodule Gateway.Proxy.Handler do
   alias Gateway.Policy
   alias Gateway.Web
   alias Directory.User
-  alias Gateway.Plug.HandleLogin
-  alias Gateway.Plug.CheckPolicies
-  alias Gateway.Plug.AuthenticateSession
+  alias Gateway.Plugs.HandleLogin           # process login POST:
+                                            # create session token in Auth.
+                                            # adds trident_key to session.
+                                            # redirects back
+  alias Gateway.Plugs.CheckPolicies         # adds protected_route? param
+  alias Gateway.Plugs.AuthenticateSession   # adds current_user if session token
 
   if Mix.env == :dev do
     use Plug.Debugger, otp_app: :gateway
@@ -27,18 +30,11 @@ defmodule Gateway.Proxy.Handler do
 
   @default_schemes [:http, :https]
 
-  # pipeline
-  #
-  plug Plug.Logger
-  plug Plug.Parsers, parsers: [:urlencoded]
-  plug :put_secret_key_base
-  plug HandleLogin, create_session_url: "/login"
-  plug CheckPolicies, paths: ["/upload"]
-  plug AuthenticateSession
 
   @valid_secret String.duplicate("abcdef0123456789", 8)
   @secret_key_base "9TeyHMxOPQw6ChuTUDVyI399hEV0QMWNIvzw95z5olLrS3fLIE3OwhLqHdSEZ9eU"
 
+  plug :put_secret_key_base
   # Use the session plug with the table name
   plug Plug.Session, store: :cookie,
                      key: "_trident_session",
@@ -48,18 +44,20 @@ defmodule Gateway.Proxy.Handler do
                      key_length: 64,
                      log: :debug
 
+  # pipeline
+  #
+  plug Plug.Logger
+  plug Plug.Parsers, parsers: [:urlencoded]
 
+  plug HandleLogin, create_session_url: "/login"
+  plug CheckPolicies, paths: ["/upload"]
+  plug AuthenticateSession
   plug :dispatch
-
-
 
 
   def put_secret_key_base(conn, _) do
     put_in conn.secret_key_base, @secret_key_base
   end
-
-
-
 
   # Same as Plug.Conn
   # https://github.com/elixir-lang/plug/blob/576c04c2cba778f1ac9ca28aa71c50efa1046b50/lib/plug/conn.ex#L125
@@ -93,9 +91,31 @@ defmodule Gateway.Proxy.Handler do
     IO.puts "...conn port = #{inspect conn.port}"
     IO.puts "...conn method = #{inspect conn.method}"
     IO.puts "...conn request path = #{inspect conn.request_path}"
+    # IO.puts "...conn cookies = #{inspect conn.cookies}"
+    # IO.puts "...conn req_cookies = #{inspect conn.req_cookies}"
 
-    conn = put_secret_key_base(conn, "")
-    finish_dispatch(conn)
+    conn = add_user_info_cookie(conn)
+    check_cookies(conn)
+    IO.inspect conn
+
+    # conn
+    # |> put_secret_key_base("")
+
+    # check_cookies(conn)
+
+    {:ok, client} =
+      conn.method
+      |> String.downcase
+      |> String.to_atom
+      |> HTTPoison.request(uri(conn), "", conn.req_headers,  options())
+
+    # {conn, ""}
+    # |> call_proxy(client)
+    IO.puts "after proxy request"
+    IO.inspect conn
+    conn
+    |> send_resp(client.status_code, client.body)
+
     # cond do
     #   request_login?(conn) ->
     #     Logger.debug fn -> "request is login !!!" end
@@ -126,6 +146,52 @@ defmodule Gateway.Proxy.Handler do
 
   end
 
+  def check_cookies(conn) do
+
+    if conn.request_path == "/documents" do
+      IO.puts "&&& check_cookies"
+      IO.puts "before fetch..."
+      IO.puts "----...conn cookies = #{inspect conn.cookies}"
+      IO.puts "----...conn req_cookies = #{inspect conn.req_cookies}"
+      IO.puts "----...conn current_user"
+      conn = conn
+      |> Web.Login.fetch_my_session
+      # |> Conn.fetch_cookies
+      IO.puts "&&&&...conn cookies = #{inspect conn.cookies}"
+      IO.puts "&&&&...conn req_cookies = #{inspect conn.req_cookies}"
+      IO.puts "&&&&...conn current_user = #{inspect conn.assigns[:current_user]}"
+    end
+    conn
+  end
+
+  def add_user_info_cookie(conn) do
+    user = conn.assigns[:current_user]
+    if user do
+      IO.puts "add_user_info cookie = #{inspect user}"
+      user_info = user_info(user)
+      IO.puts "user_info str = #{user_info}"
+      conn = conn
+      # |> put_resp_cookie("trident_user", user_info)
+      |> put_resp_cookie("trident_user_email", user.email)
+      |> put_resp_cookie("trident_user_first_name", user.first_name)
+      |> put_resp_cookie("trident_user_last_name", user.last_name)
+
+    end
+    conn
+  end
+
+  # def user_info(user) do
+  #   args = %{"email" => user.email, "first_name" => user.first_name,"last_name" => user.last_name}
+  #   IO.puts "user_info = #{inspect args}"
+  #   result = Poison.encode!(args)
+  #   IO.puts "User info encoded ********* - #{inspect result}"
+  #   result
+  # end
+
+  def user_info(user) do
+    "email=#{user.email},first_name=#{user.first_name},last_name=#{user.last_name}"
+  end
+
   def allow_assets(conn) do
     IO.puts "allow assets"
     accept = Plug.Conn.get_req_header(conn, "accept") |> List.last
@@ -150,18 +216,22 @@ defmodule Gateway.Proxy.Handler do
   @doc """
   Finish dispatching connection for authenticated or route not protected.
   """
-  def finish_dispatch(conn) do
-    IO.puts "finish dispatch"
+  # def finish_dispatch(conn) do
+  #   IO.puts "finish dispatch *********"
+  #   IO.puts "conn request path = #{conn.request_path}"
+  #   IO.puts "...conn cookies = #{inspect conn.cookies}"
+  #   IO.puts "...conn req_cookies = #{inspect conn.req_cookies}"
+  #   # check_cookies(conn)
 
-    {:ok, client} =
-      conn.method
-      |> String.downcase
-      |> String.to_atom
-      |> HTTPoison.request(uri(conn), "", conn.req_headers,  options())
+  #   {:ok, client} =
+  #     conn.method
+  #     |> String.downcase
+  #     |> String.to_atom
+  #     |> HTTPoison.request(uri(conn), "", conn.req_headers,  options())
 
-    {conn, ""}
-    |> call_proxy(client)
-  end
+  #   {conn, ""}
+  #   |> call_proxy(client)
+  # end
 
   # HTTPoison.request(:get, "http://localhost:3000", "", [], [hackney: [{:follow_redirect, true}]])
   # this works for redirects ... like google
@@ -223,11 +293,15 @@ defmodule Gateway.Proxy.Handler do
   end
 
   defp call_proxy({conn, _req_body}, client) do
+    # IO.puts "**** call proxy... #{inspect client}"
+    IO.puts "..........send proxy cookies = #{inspect conn.cookies}"
+    IO.puts "..........send proxy req_cookies = #{inspect conn.req_cookies}"
     Logger.debug fn -> "call proxy: request path: #{gen_path(conn, target_proxy(conn))}" end
-    headers = conn.req_headers |> Enum.into(%{})
+    # headers = conn.req_headers |> Enum.into(%{})
     # Logger.debug fn -> "#{__MODULE__}.call_proxy, :ok, headers: #{headers |> Poison.encode!}, body: #{client.body}, status: #{client.status_code}" end
 
     conn
+    # |> check_cookies
     |> send_resp(client.status_code, client.body)
   end
 
