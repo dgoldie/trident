@@ -5,8 +5,8 @@ defmodule Gateway.Plugs.CheckPolicies do
 
   require Logger
   alias Gateway.Policy
-  alias Gateway.Proxy.Handler
-  alias Gateway.Web
+  # alias Gateway.Proxy.Handler
+  # alias Gateway.Web
   import Plug.Conn
 
 
@@ -17,7 +17,7 @@ defmodule Gateway.Plugs.CheckPolicies do
   #
   def call(%Plug.Conn{request_path: path} = conn, opts) do
     Logger.debug fn -> "-------Plug CheckPolicies: ---------------" end
-    Handler.check_cookies(conn)
+    # Handler.check_cookies(conn)
 
     Logger.debug fn -> ".......request path = #{path}" end
     IO.puts "opts = #{inspect opts}"

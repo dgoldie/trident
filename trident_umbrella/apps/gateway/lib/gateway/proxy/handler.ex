@@ -1,4 +1,5 @@
-require IEx;
+require IEx
+
 
 defmodule Gateway.Proxy.Handler do
   @moduledoc """
@@ -9,18 +10,16 @@ defmodule Gateway.Proxy.Handler do
   import Plug.Conn
   require Logger
 
-
-  alias Plug.Conn
   alias Plug.Adapters.Cowboy, as: PlugCowboy
-  alias Gateway.Policy
-  alias Gateway.Web
-  alias Directory.User
+
   alias Gateway.Plugs.HandleLogin           # process login POST:
                                             # create session token in Auth.
                                             # adds trident_key to session.
                                             # redirects back
   alias Gateway.Plugs.CheckPolicies         # adds protected_route? param
   alias Gateway.Plugs.AuthenticateSession   # adds current_user if session token
+  alias Gateway.Plugs.Proxy                 # call target with web client and
+                                            # return with streaming
 
   if Mix.env == :dev do
     use Plug.Debugger, otp_app: :gateway
@@ -29,8 +28,6 @@ defmodule Gateway.Proxy.Handler do
   alias Poison
 
   @default_schemes [:http, :https]
-
-
   @valid_secret String.duplicate("abcdef0123456789", 8)
   @secret_key_base "9TeyHMxOPQw6ChuTUDVyI399hEV0QMWNIvzw95z5olLrS3fLIE3OwhLqHdSEZ9eU"
 
@@ -52,7 +49,7 @@ defmodule Gateway.Proxy.Handler do
   plug HandleLogin, create_session_url: "/login"
   plug CheckPolicies, paths: ["/upload"]
   plug AuthenticateSession
-  plug :dispatch
+  plug Proxy
 
 
   def put_secret_key_base(conn, _) do
@@ -82,121 +79,32 @@ defmodule Gateway.Proxy.Handler do
   defp req_timeout,
     do: Application.get_env :gateway, :timeout, 10_000
 
-  @doc """
-  Dispatch connection.
-  """
-  @spec dispatch(Plug.Conn.t, param) :: Plug.Conn.t
-  def dispatch(conn, _opts) do
-    IO.puts "dispatch"
-    IO.puts "...conn port = #{inspect conn.port}"
-    IO.puts "...conn method = #{inspect conn.method}"
-    IO.puts "...conn request path = #{inspect conn.request_path}"
-    # IO.puts "...conn cookies = #{inspect conn.cookies}"
-    # IO.puts "...conn req_cookies = #{inspect conn.req_cookies}"
-
-    conn = add_user_info_cookie(conn)
-    check_cookies(conn)
-    IO.inspect conn
-
-    # conn
-    # |> put_secret_key_base("")
-
-    # check_cookies(conn)
-
-    {:ok, client} =
-      conn.method
-      |> String.downcase
-      |> String.to_atom
-      |> HTTPoison.request(uri(conn), "", conn.req_headers,  options())
-
-    # {conn, ""}
-    # |> call_proxy(client)
-    IO.puts "after proxy request"
-    IO.inspect conn
-    conn
-    |> send_resp(client.status_code, client.body)
-
-    # cond do
-    #   request_login?(conn) ->
-    #     Logger.debug fn -> "request is login !!!" end
-    #     Web.Login.create_session(conn, target_proxy(conn)[:to])
-
-    #   # allow_assets(conn) ->
-    #   #   Logger.debug fn -> "request assets !!!" end
-    #   #   finish_dispatch(conn)
-
-    #   # Policy.protected_route?(conn) ->
-    #   #   Logger.debug fn -> "request is protected_route !!!" end
-
-    #   #   case authenticate(conn) do
-    #   #     nil  ->
-    #   #       Logger.debug fn -> "authenticate session failed !!!" end
-    #   #       Web.Login.new_login(conn)
-
-    #   #     email ->
-    #   #       Logger.debug fn -> "authenticated #{email}, need to pass" end
-    #   #       finish_dispatch(conn)
-    #   #   end
-
-    #   true ->
-    #     Logger.debug "request is NOT a protected_route !!!"
-
-    #     finish_dispatch(conn)
-    # end
-
-  end
-
-  def check_cookies(conn) do
-
-    if conn.request_path == "/documents" do
-      IO.puts "&&& check_cookies"
-      IO.puts "before fetch..."
-      IO.puts "----...conn cookies = #{inspect conn.cookies}"
-      IO.puts "----...conn req_cookies = #{inspect conn.req_cookies}"
-      IO.puts "----...conn current_user"
-      conn = conn
-      |> Web.Login.fetch_my_session
-      # |> Conn.fetch_cookies
-      IO.puts "&&&&...conn cookies = #{inspect conn.cookies}"
-      IO.puts "&&&&...conn req_cookies = #{inspect conn.req_cookies}"
-      IO.puts "&&&&...conn current_user = #{inspect conn.assigns[:current_user]}"
-    end
-    conn
-  end
-
   def add_user_info_cookie(conn) do
     user = conn.assigns[:current_user]
     if user do
       IO.puts "add_user_info cookie = #{inspect user}"
       user_info = user_info(user)
-      IO.puts "user_info str = #{user_info}"
-      conn = conn
-      # |> put_resp_cookie("trident_user", user_info)
+      IO.puts "user_info str = #{inspect user_info}"
+
+      new_conn = conn
       |> put_resp_cookie("trident_user_email", user.email)
       |> put_resp_cookie("trident_user_first_name", user.first_name)
       |> put_resp_cookie("trident_user_last_name", user.last_name)
 
+      IO.puts "after add user info"
+      IO.inspect new_conn
+      new_conn
+    else
+      conn
     end
-    conn
   end
 
-  # def user_info(user) do
-  #   args = %{"email" => user.email, "first_name" => user.first_name,"last_name" => user.last_name}
-  #   IO.puts "user_info = #{inspect args}"
-  #   result = Poison.encode!(args)
-  #   IO.puts "User info encoded ********* - #{inspect result}"
-  #   result
-  # end
-
   def user_info(user) do
-    "email=#{user.email},first_name=#{user.first_name},last_name=#{user.last_name}"
+    %{email: user.email, first_name: user.first_name, last_name: user.last_name}
   end
 
   def allow_assets(conn) do
-    IO.puts "allow assets"
-    accept = Plug.Conn.get_req_header(conn, "accept") |> List.last
-    IO.puts "accept = #{inspect accept}"
-    IO.puts "conn request path = #{conn.request_path}"
+    # accept = Plug.Conn.get_req_header(conn, "accept") |> List.last
     ext = Path.extname(conn.request_path) |> String.downcase
     asset_extensions = ~w(.css .js .jpg .png .gif .bmp .ico)
     ext in asset_extensions
@@ -207,43 +115,7 @@ defmodule Gateway.Proxy.Handler do
   end
 
   def root_uri(conn) do
-    IO.puts "root uri"
-    base = target_proxy(conn)[:to]
-    IO.puts "base is #{inspect base}"
-    base
-  end
-
-  @doc """
-  Finish dispatching connection for authenticated or route not protected.
-  """
-  # def finish_dispatch(conn) do
-  #   IO.puts "finish dispatch *********"
-  #   IO.puts "conn request path = #{conn.request_path}"
-  #   IO.puts "...conn cookies = #{inspect conn.cookies}"
-  #   IO.puts "...conn req_cookies = #{inspect conn.req_cookies}"
-  #   # check_cookies(conn)
-
-  #   {:ok, client} =
-  #     conn.method
-  #     |> String.downcase
-  #     |> String.to_atom
-  #     |> HTTPoison.request(uri(conn), "", conn.req_headers,  options())
-
-  #   {conn, ""}
-  #   |> call_proxy(client)
-  # end
-
-  # HTTPoison.request(:get, "http://localhost:3000", "", [], [hackney: [{:follow_redirect, true}]])
-  # this works for redirects ... like google
-  #
-  defp options do
-    [
-      connect_timeout: req_timeout(),
-      recv_timeout: req_timeout(),
-      ssl_options: [],
-      max_redirects: 5,
-      follow_redirect: true
-    ]
+    target_proxy(conn)[:to]
   end
 
   @spec uri(Plug.Conn.t) :: String.t
@@ -292,58 +164,11 @@ defmodule Gateway.Proxy.Handler do
     |> Enum.at(0)
   end
 
-  defp call_proxy({conn, _req_body}, client) do
-    # IO.puts "**** call proxy... #{inspect client}"
-    IO.puts "..........send proxy cookies = #{inspect conn.cookies}"
-    IO.puts "..........send proxy req_cookies = #{inspect conn.req_cookies}"
-    Logger.debug fn -> "call proxy: request path: #{gen_path(conn, target_proxy(conn))}" end
-    # headers = conn.req_headers |> Enum.into(%{})
-    # Logger.debug fn -> "#{__MODULE__}.call_proxy, :ok, headers: #{headers |> Poison.encode!}, body: #{client.body}, status: #{client.status_code}" end
 
-    conn
-    # |> check_cookies
-    |> send_resp(client.status_code, client.body)
-  end
-
-  # defp write_proxy({conn, _req_body}, client) do
-  #   IO.puts "write proxy"
-  #   case read_body(conn, [read_timeout: req_timeout()]) do
-  #     {:ok, body, conn} ->
-  #     Logger.debug fn -> "request path: #{gen_path(conn, target_proxy(conn))}" end
-  #     Logger.debug fn -> "#{__MODULE__}.write_proxy, :ok, headers: #{conn.req_headers |> Poison.encode!}, body: #{body}" end
-  #       HTTPoison.send_body client, body
-  #       {conn, body}
-  #     {:more, body, conn} ->
-  #     Logger.debug fn -> "request path: #{gen_path(conn, target_proxy(conn))}" end
-  #     Logger.debug fn -> "#{__MODULE__}.write_proxy, :more, body: #{body}" end
-  #       HTTPoison.send_body client, body
-  #       write_proxy {conn, ""}, client
-  #       {conn, body}
-  #     {:error, term} ->
-  #       Logger.error term
-  #   end
+  # defp read_request(conn, req_body, res_body, status) do
+  #   conn
+  #   |> send_resp(status, res_body)
   # end
-
-  # defp read_proxy({conn, req_body}, client) do
-  #   IO.puts "read proxy"
-  #
-  #   case HTTPoison.start_response client do
-  #     {:ok, status, headers, client} ->
-  #     Logger.debug fn -> "request path: #{gen_path(conn, target_proxy(conn))}" end
-  #     Logger.debug fn -> "#{__MODULE__}.read_proxy, :ok, headers: #{headers |> Poison.encode!}, status: #{status}" end
-  #       {:ok, res_body} = HTTPoison.body client
-  #       read_request(%{conn | resp_headers: headers}, req_body, res_body, status)
-  #     {:error, message} ->
-  #     Logger.debug fn -> "request path: #{gen_path(conn, target_proxy(conn))}" end
-  #     Logger.debug fn -> "#{__MODULE__}.read_proxy, :error, message: #{message}" end
-  #       read_request(%{conn | resp_headers: conn.resp_headers}, req_body, Atom.to_string(message), 408)
-  #   end
-  # end
-
-  defp read_request(conn, req_body, res_body, status) do
-    conn
-    |> send_resp(status, res_body)
-  end
 
   defp gen_path(conn, proxy) when proxy == nil do
     case conn.scheme do
@@ -360,20 +185,6 @@ defmodule Gateway.Proxy.Handler do
     %URI{uri | path: conn.request_path}
     |> URI.to_string
   end
-
-
-
-  # defp authenticate(conn) do
-  #   IO.puts "authenticate"
-
-  #   opts = Plug.Session.init(store: :cookie, key: "_trident_session", secret: @valid_secret, signing_salt: "cookie store signing salt")
-  #   conn
-  #   |> Plug.Session.call(opts)
-  #   |> fetch_session
-  #   |> get_session(:trident_key)
-  #   |> IO.inspect
-  #   |> Auth.get_session
-  # end
 
   def valid_secret do
     @valid_secret

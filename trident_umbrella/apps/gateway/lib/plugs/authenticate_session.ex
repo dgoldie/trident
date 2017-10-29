@@ -17,7 +17,7 @@ defmodule Gateway.Plugs.AuthenticateSession do
     Logger.debug fn -> "-------Plug AuthenticateSession: ---------------" end
     Logger.debug fn -> ".......request path = #{path}" end
     IO.puts "opts = #{inspect opts}"
-    Handler.check_cookies(conn)
+    # Handler.check_cookies(conn)
 
     # protected = Policy.protected_route?(conn)
     # IO.puts "protected? = #{inspect protected}"
@@ -46,7 +46,7 @@ defmodule Gateway.Plugs.AuthenticateSession do
 
 
     IO.puts "end of AuthenticateSession call: "
-    IO.inspect conn
+    # IO.inspect conn
     conn
   end
 

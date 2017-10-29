@@ -38,11 +38,11 @@ proxies: [
            %{port: 8086,
              to:   "http://localhost:3010",
              allow: ["/", "/assets/**", "/about"]},
-           %{port: 8090,
-             to:   "http://localhost:4000",
-             allow: ["/", "/css/**", "/js/**", "/phoenix/live_reload/**"]},
-           %{port: 8091,
-             to:   "https://lit-island-51614.herokuapp.com/",
-             allow: ["/", "/css/**", "/js/**", "/phoenix/live_reload/**"]}
+           # %{port: 8090,
+           #   to:   "http://localhost:4000",
+           #   allow: ["/", "/css/**", "/js/**", "/phoenix/live_reload/**"]},
+           # %{port: 8091,
+           #   to:   "https://lit-island-51614.herokuapp.com/",
+           #   allow: ["/", "/css/**", "/js/**", "/phoenix/live_reload/**"]}
 
          ]

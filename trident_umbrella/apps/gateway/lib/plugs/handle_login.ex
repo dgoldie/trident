@@ -24,7 +24,7 @@ defmodule Gateway.Plugs.HandleLogin do
   def call(%Plug.Conn{request_path: path} = conn, opts) do
     IO.puts "call *******"
     Logger.debug fn -> "-------Plug HandleLogin: ---------------" end
-    Handler.check_cookies(conn)
+    # Handler.check_cookies(conn)
 
     Logger.debug fn -> ".......request path = #{path}, method: #{conn.method}" end
     IO.puts "opts = #{inspect opts}"
@@ -36,7 +36,7 @@ defmodule Gateway.Plugs.HandleLogin do
     end
 
     IO.puts "after create session"
-    Handler.check_cookies(conn)
+    # Handler.check_cookies(conn)
     conn
   end
 

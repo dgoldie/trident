@@ -14,7 +14,7 @@ defmodule Gateway.Mixfile do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger, :cowboy, :plug, :httpoison],
+      extra_applications: [:logger, :cowboy, :plug, :httpotion],
       mod: {Gateway.Application, []}
     ]
   end
@@ -22,14 +22,15 @@ defmodule Gateway.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:cowboy, "~> 1.0"},
+      {:cowboy, "~> 1.1"},
       {:plug, "~> 1.4"},
+      # {:plug, path: "/Users/doug/code/work/libraries/plug"},
       {:poison, "~> 3.1"},
-      {:httpoison, "~> 0.13"},
+      # {:httpoison, "~> 0.13"},
+      {:httpotion, "~> 3.0.2"},
+      # {:httpotion, path: "/Users/doug/code/work/libraries/httpotion"},
       {:fuzzyurl, "~> 0.9.0"},
       {:credo, "~> 0.8", only: [:dev, :test], runtime: false}
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
     ]
   end
 end
